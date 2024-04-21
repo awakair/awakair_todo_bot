@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/awakair/awakair_todo_bot/gen/go/api/todo-service";
+
+package todoservice;
+
+service TodoService {
+  rpc CreateUser(User) returns (google.protobuf.Empty);
+  rpc EditUserSettings(User) returns (google.protobuf.Empty);
+  rpc AddReminder(Reminder) returns (ReminderId);
+  rpc RemoveReminder(ReminderId) returns (google.protobuf.Empty);
+  rpc GetRemindersByUserId(UserId) returns (stream Reminder);
+}
+
+message User {
+  int64 id = 1;
+  string language_code = 2 [(buf.validate.field).string.len = 2];
+  int32 utc_offset = 3 [(buf.validate.field).int32.gte = -12, (buf.validate.field).int32.lte = 14];
+}
+
+message Reminder {
+  int64 user_id = 1;
+  string reminder_text = 2 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.Timestamp remind_timestamp = 5 [(buf.validate.field).timestamp.gt_now = true];
+}
+
+message ReminderId {
+  int64 id = 1;
+}
+
+message UserId {
+  int32 id = 1;
+}
