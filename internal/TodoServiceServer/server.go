@@ -18,7 +18,7 @@ type TodoServiceServer struct {
 	pb.UnimplementedTodoServiceServer
 }
 
-type DbQuery string
+type DbQuery = string
 
 const (
 	InsertNewUser DbQuery = "INSERT INTO users (id, language_code, utc_offset) VALUES ($1::bigint, $2, $3);"
