@@ -4,7 +4,7 @@ import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "buf/validate/validate.proto";
 
-option go_package = "github.com/awakair/awakair_todo_bot/gen/go/api/todo-service";
+option go_package = "github.com/awakair/awakair_todo_bot/api/todo-service";
 
 package todoservice;
 
