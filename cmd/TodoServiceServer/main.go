@@ -28,7 +28,7 @@ var (
 func main() {
 	db, err := sql.Open("pgx", dbUrl)
 	if err != nil {
-		log.Fatalf("Cannot connect to database with url %s: %v", dbUrl, err)
+		log.Fatalf("cannot connect to database with url %s: %v", dbUrl, err)
 	}
 	defer db.Close()
 
