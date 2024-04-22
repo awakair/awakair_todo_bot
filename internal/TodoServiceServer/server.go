@@ -29,7 +29,7 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 	}
 
 	if err = v.Validate(to_create); err != nil {
-		log.Printf("validation failed at CreateUser: %v", err)
+		log.Printf("Failed to create user: %v", err)
 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -40,7 +40,7 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 
 	if err != nil {
 		log.Printf(
-			"Failed to create new user with id %v, language code %v and utc_offset %v: %v",
+			"Failed to create user with id %v, language code %v and utc_offset %v: %v",
 			to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
 			err,
 		)
@@ -48,7 +48,7 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 	}
 
 	log.Printf(
-		"Created new user with id %v, language code %v and utc_offset %v",
+		"Created user with id %v, language code %v and utc_offset %v",
 		to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
 	)
 
