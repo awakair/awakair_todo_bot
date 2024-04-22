@@ -11,18 +11,13 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/awakair/awakair_todo_bot/api/todo-service"
+	dbqueries "github.com/awakair/awakair_todo_bot/internal/DbQueries"
 )
 
 type TodoServiceServer struct {
 	Db *sql.DB
 	pb.UnimplementedTodoServiceServer
 }
-
-type DbQuery = string
-
-const (
-	InsertNewUser DbQuery = "INSERT INTO users (id, language_code, utc_offset) VALUES ($1::bigint, $2, $3);"
-)
 
 func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) (*emptypb.Empty, error) {
 	v, err := protovalidate.New()
@@ -40,7 +35,7 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 	}
 
 	_, err = s.Db.ExecContext(
-		ctx, string(InsertNewUser), to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
+		ctx, string(dbqueries.InsertNewUser), to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
 	)
 
 	if err != nil {
@@ -49,7 +44,7 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 			to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
 			err,
 		)
-		return nil, status.Error(codes.Unknown, err.Error())
+		return nil, status.Error(codes.ResourceExhausted, err.Error())
 	}
 
 	log.Printf(
