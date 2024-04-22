@@ -2,8 +2,10 @@ package todoserviceserver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -14,6 +16,7 @@ import (
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 
 	pb "github.com/awakair/awakair_todo_bot/api/todo-service"
+	dbqueries "github.com/awakair/awakair_todo_bot/internal/DbQueries"
 )
 
 func server(ctx context.Context) (pb.TodoServiceClient, func(), sqlmock.Sqlmock) {
@@ -60,11 +63,75 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 	client, closer, mock := server(ctx)
 	defer closer()
 
-	t.Run("empty user", func(t *testing.T) {
-		_, err := client.CreateUser(ctx, &pb.User{})
+	t.Run("wrong users", func(t *testing.T) {
+		users := []*pb.User{
+			{},
+			{
+				Id:           0,
+				LanguageCode: "hello world",
+				UtcOffset:    0,
+			},
+			{
+				Id:           0,
+				LanguageCode: "en",
+				UtcOffset:    2109,
+			},
+		}
 
-		if status.Code(err) != codes.InvalidArgument {
-			t.Errorf("expected InvalidArgument got %v", err)
+		for _, user := range users {
+			_, err := client.CreateUser(ctx, user)
+
+			if status.Code(err) != codes.InvalidArgument {
+				t.Errorf("expected InvalidArgument while inserting %v got %v", user, err)
+			}
+		}
+	})
+
+	t.Run("regular user", func(t *testing.T) {
+		user := &pb.User{
+			Id:           0,
+			LanguageCode: "en",
+			UtcOffset:    0,
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
+			user.GetId(), user.GetLanguageCode(), user.GetUtcOffset(),
+		).WillReturnResult(
+			sqlmock.NewResult(user.GetId(), 1),
+		)
+
+		_, err := client.CreateUser(ctx, user)
+
+		if err != nil {
+			t.Errorf("did not expect error while inserting user %v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met, error: %v", err)
+		}
+	})
+
+	t.Run("regular user", func(t *testing.T) {
+		user := &pb.User{
+			Id:           0,
+			LanguageCode: "en",
+			UtcOffset:    0,
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
+			user.GetId(), user.GetLanguageCode(), user.GetUtcOffset(),
+		).WillReturnError(
+			fmt.Errorf("oops..."),
+		)
+
+		_, err := client.CreateUser(ctx, user)
+
+		if status.Code(err) != codes.ResourceExhausted {
+			t.Errorf("expected ResourceExhausted error while inserting user %v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met, error: %v", err)
 		}
 	})
 }
