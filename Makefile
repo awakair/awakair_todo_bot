@@ -1,6 +1,15 @@
 SERVER_PACKAGE_PATH := cmd/TodoServiceServer/main.go
 SERVER_BINARY_NAME := todo_service_server
 SERVER_EXECUTABLE_PATH := /tmp/${SERVER_BINARY_NAME}
+COVERAGE_FILE_PATH := /tmp/cover.out
+COVERAGE_HTML_FILE_PATH = /tmp/cover.html
+UNAME_S := $(shell uname -s)
+
+ifeq (${UNAME_S}, Darwin)
+	DEFAULT_OPEN := "open"
+else
+	DEFAULT_OPEN := "xdg-open"
+endif
 
 ## help: print this help message
 .PHONY: help
@@ -24,6 +33,17 @@ gen_proto_server:
 .PHONY: build_server
 build_server: gen_proto_server
 	go build -o ${SERVER_EXECUTABLE_PATH} ${SERVER_PACKAGE_PATH}
+
+## test_server: test server code
+.PHONY: test_server
+test_server:
+	go test -cover -coverprofile ${COVERAGE_FILE_PATH} internal/TodoServiceServer/server.go internal/TodoServiceServer/server_test.go
+
+## cover_server: measure coverage of server code and open it
+.PHONE: cover_server
+cover_server: test_server
+	go tool cover -html ${COVERAGE_FILE_PATH} -o ${COVERAGE_HTML_FILE_PATH}
+	${DEFAULT_OPEN} ${COVERAGE_HTML_FILE_PATH}
 
 ## run_server: compile and run server's sources
 .PHONY: run_server
