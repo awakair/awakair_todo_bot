@@ -34,9 +34,30 @@ func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	_, err = s.Db.ExecContext(
-		ctx, string(dbqueries.InsertNewUser), to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
-	)
+	if to_create.GetLanguageCode() == nil && to_create.GetUtcOffset() == nil {
+		_, err = s.Db.ExecContext(
+			ctx, string(dbqueries.InsertNewUserEmpty),
+			to_create.GetId(),
+		)
+	} else if to_create.GetLanguageCode() != nil && to_create.GetUtcOffset() != nil {
+		_, err = s.Db.ExecContext(
+			ctx, string(dbqueries.InsertNewUser),
+			to_create.GetId(),
+			to_create.GetLanguageCode().GetValue(), to_create.GetUtcOffset().GetValue(),
+		)
+	} else if to_create.GetLanguageCode() != nil {
+		_, err = s.Db.ExecContext(
+			ctx, string(dbqueries.InsertNewUserLanguageCode),
+			to_create.GetId(),
+			to_create.GetLanguageCode().GetValue(),
+		)
+	} else {
+		_, err = s.Db.ExecContext(
+			ctx, string(dbqueries.InsertNewUserUtcOffset),
+			to_create.GetId(),
+			to_create.GetUtcOffset().GetValue(),
+		)
+	}
 
 	if err != nil {
 		log.Printf(

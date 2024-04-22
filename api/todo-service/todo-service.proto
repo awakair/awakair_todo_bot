@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 import "buf/validate/validate.proto";
 
 option go_package = "github.com/awakair/awakair_todo_bot/api/todo-service";
@@ -18,13 +19,13 @@ service TodoService {
 
 message User {
   int64 id = 1;
-  string language_code = 2 [(buf.validate.field).string.len = 2];
-  int32 utc_offset = 3 [(buf.validate.field).int32.gte = -12, (buf.validate.field).int32.lte = 14];
+  google.protobuf.StringValue language_code = 2 [(buf.validate.field).string.len = 2];
+  google.protobuf.Int32Value utc_offset = 3 [(buf.validate.field).int32.gte = -12, (buf.validate.field).int32.lte = 14];
 }
 
 message Reminder {
   int64 user_id = 1;
-  string reminder_text = 2 [(buf.validate.field).string.min_len = 1];
+  google.protobuf.StringValue reminder_text = 2 [(buf.validate.field).string.min_len = 1];
   google.protobuf.Timestamp remind_timestamp = 5 [(buf.validate.field).timestamp.gt_now = true];
 }
 

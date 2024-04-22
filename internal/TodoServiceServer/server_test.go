@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 
 	pb "github.com/awakair/awakair_todo_bot/api/todo-service"
@@ -65,16 +66,15 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 
 	t.Run("wrong users", func(t *testing.T) {
 		users := []*pb.User{
-			{},
 			{
 				Id:           0,
-				LanguageCode: "hello world",
-				UtcOffset:    0,
+				LanguageCode: wrapperspb.String("hello world"),
+				UtcOffset:    wrapperspb.Int32(0),
 			},
 			{
 				Id:           0,
-				LanguageCode: "en",
-				UtcOffset:    2109,
+				LanguageCode: wrapperspb.String("en"),
+				UtcOffset:    wrapperspb.Int32(2109),
 			},
 		}
 
@@ -90,12 +90,13 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 	t.Run("regular user", func(t *testing.T) {
 		user := &pb.User{
 			Id:           0,
-			LanguageCode: "en",
-			UtcOffset:    0,
+			LanguageCode: wrapperspb.String("en"),
+			UtcOffset:    wrapperspb.Int32(0),
 		}
 
 		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
-			user.GetId(), user.GetLanguageCode(), user.GetUtcOffset(),
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		).WillReturnResult(
 			sqlmock.NewResult(user.GetId(), 1),
 		)
@@ -111,15 +112,56 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("regular user", func(t *testing.T) {
+	t.Run("partial filled user", func(t *testing.T) {
+		users := []*pb.User{
+			{Id: 0},
+			{Id: 0, LanguageCode: wrapperspb.String("en")},
+			{Id: 0, UtcOffset: wrapperspb.Int32(0)},
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserEmpty)).WithArgs(
+			users[0].GetId(),
+		).WillReturnResult(
+			sqlmock.NewResult(users[0].GetId(), 1),
+		)
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserLanguageCode)).WithArgs(
+			users[1].GetId(),
+			users[1].GetLanguageCode().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(users[1].GetId(), 1),
+		)
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserUtcOffset)).WithArgs(
+			users[2].GetId(),
+			users[2].GetUtcOffset().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(users[2].GetId(), 1),
+		)
+
+		for _, user := range users {
+			_, err := client.CreateUser(ctx, user)
+
+			if err != nil {
+				t.Errorf("did not expect error while inserting user %v got %v", user, err)
+			}
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met, error: %v", err)
+		}
+	})
+
+	t.Run("db returns error", func(t *testing.T) {
 		user := &pb.User{
 			Id:           0,
-			LanguageCode: "en",
-			UtcOffset:    0,
+			LanguageCode: wrapperspb.String("en"),
+			UtcOffset:    wrapperspb.Int32(0),
 		}
 
 		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
-			user.GetId(), user.GetLanguageCode(), user.GetUtcOffset(),
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		).WillReturnError(
 			fmt.Errorf("oops..."),
 		)
