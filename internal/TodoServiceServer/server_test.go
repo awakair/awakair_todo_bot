@@ -64,7 +64,7 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 	client, closer, mock := server(ctx)
 	defer closer()
 
-	t.Run("wrong users", func(t *testing.T) {
+	t.Run("wrong user", func(t *testing.T) {
 		users := []*pb.User{
 			{
 				Id:           0,
@@ -76,13 +76,23 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 				LanguageCode: wrapperspb.String("en"),
 				UtcOffset:    wrapperspb.Int32(2109),
 			},
+			{
+				Id:           0,
+				LanguageCode: wrapperspb.String("russky"),
+				UtcOffset:    nil,
+			},
+			{
+				Id:           0,
+				LanguageCode: nil,
+				UtcOffset:    wrapperspb.Int32(314159),
+			},
 		}
 
 		for _, user := range users {
 			_, err := client.CreateUser(ctx, user)
 
 			if status.Code(err) != codes.InvalidArgument {
-				t.Errorf("expected InvalidArgument while inserting %v got %v", user, err)
+				t.Errorf("expected InvalidArgument with user %+v got %v", user, err)
 			}
 		}
 	})
@@ -94,7 +104,7 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 			UtcOffset:    wrapperspb.Int32(0),
 		}
 
-		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertUser.Full)).WithArgs(
 			user.GetId(),
 			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		).WillReturnResult(
@@ -104,11 +114,11 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 		_, err := client.CreateUser(ctx, user)
 
 		if err != nil {
-			t.Errorf("did not expect error while inserting user %v got %v", user, err)
+			t.Errorf("did not expect error with user %+v got %v", user, err)
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
-			t.Errorf("mock expectations weren't met, error: %v", err)
+			t.Errorf("mock expectations weren't met with user %+v, error: %v", user, err)
 		}
 	})
 
@@ -119,20 +129,20 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 			{Id: 0, UtcOffset: wrapperspb.Int32(0)},
 		}
 
-		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserEmpty)).WithArgs(
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertUser.Empty)).WithArgs(
 			users[0].GetId(),
 		).WillReturnResult(
 			sqlmock.NewResult(users[0].GetId(), 1),
 		)
 
-		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserLanguageCode)).WithArgs(
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertUser.LanguageCode)).WithArgs(
 			users[1].GetId(),
 			users[1].GetLanguageCode().GetValue(),
 		).WillReturnResult(
 			sqlmock.NewResult(users[1].GetId(), 1),
 		)
 
-		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUserUtcOffset)).WithArgs(
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertUser.UtcOffset)).WithArgs(
 			users[2].GetId(),
 			users[2].GetUtcOffset().GetValue(),
 		).WillReturnResult(
@@ -143,7 +153,7 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 			_, err := client.CreateUser(ctx, user)
 
 			if err != nil {
-				t.Errorf("did not expect error while inserting user %v got %v", user, err)
+				t.Errorf("did not expect error with user %+v got %v", user, err)
 			}
 		}
 
@@ -159,7 +169,7 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 			UtcOffset:    wrapperspb.Int32(0),
 		}
 
-		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertNewUser)).WithArgs(
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.InsertUser.Full)).WithArgs(
 			user.GetId(),
 			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		).WillReturnError(
@@ -169,11 +179,160 @@ func TestTodoServiceServer_CreateUser(t *testing.T) {
 		_, err := client.CreateUser(ctx, user)
 
 		if status.Code(err) != codes.ResourceExhausted {
-			t.Errorf("expected ResourceExhausted error while inserting user %v got %v", user, err)
+			t.Errorf("expected ResourceExhausted error with user %+v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met with user %+v, error: %v", user, err)
+		}
+	})
+}
+
+func TestTodoServiceServer_EditUserSettings(t *testing.T) {
+	ctx := context.Background()
+
+	client, closer, mock := server(ctx)
+	defer closer()
+
+	t.Run("wrong user", func(t *testing.T) {
+		users := []*pb.User{
+			{},
+			{
+				Id:           0,
+				LanguageCode: wrapperspb.String("hello world"),
+				UtcOffset:    wrapperspb.Int32(0),
+			},
+			{
+				Id:           0,
+				LanguageCode: wrapperspb.String("en"),
+				UtcOffset:    wrapperspb.Int32(2109),
+			},
+			{
+				Id:           0,
+				LanguageCode: wrapperspb.String("russky"),
+				UtcOffset:    nil,
+			},
+			{
+				Id:           0,
+				LanguageCode: nil,
+				UtcOffset:    wrapperspb.Int32(314159),
+			},
+		}
+
+		for _, user := range users {
+			_, err := client.EditUserSettings(ctx, user)
+
+			if status.Code(err) != codes.InvalidArgument {
+				t.Errorf("expected InvalidArgument with user %+v got %v", user, err)
+			}
+		}
+	})
+
+	t.Run("regular user", func(t *testing.T) {
+		user := &pb.User{
+			Id:           0,
+			LanguageCode: wrapperspb.String("en"),
+			UtcOffset:    wrapperspb.Int32(0),
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.UpdateUser.Full)).WithArgs(
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(user.GetId(), 1),
+		)
+
+		_, err := client.EditUserSettings(ctx, user)
+
+		if err != nil {
+			t.Errorf("did not expect error with user %+v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met with user %+v, error: %v", user, err)
+		}
+	})
+
+	t.Run("partial filled user", func(t *testing.T) {
+		users := []*pb.User{
+			{Id: 0, LanguageCode: wrapperspb.String("en")},
+			{Id: 0, UtcOffset: wrapperspb.Int32(0)},
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.UpdateUser.LanguageCode)).WithArgs(
+			users[0].GetId(),
+			users[0].GetLanguageCode().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(users[0].GetId(), 1),
+		)
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.UpdateUser.UtcOffset)).WithArgs(
+			users[1].GetId(),
+			users[1].GetUtcOffset().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(users[1].GetId(), 1),
+		)
+
+		for _, user := range users {
+			_, err := client.EditUserSettings(ctx, user)
+
+			if err != nil {
+				t.Errorf("did not expect error with user %+v got %v", user, err)
+			}
 		}
 
 		if err := mock.ExpectationsWereMet(); err != nil {
 			t.Errorf("mock expectations weren't met, error: %v", err)
+		}
+	})
+
+	t.Run("db returns error", func(t *testing.T) {
+		user := &pb.User{
+			Id:           0,
+			LanguageCode: wrapperspb.String("en"),
+			UtcOffset:    wrapperspb.Int32(0),
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.UpdateUser.Full)).WithArgs(
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
+		).WillReturnError(
+			fmt.Errorf("oops..."),
+		)
+
+		_, err := client.EditUserSettings(ctx, user)
+
+		if status.Code(err) != codes.ResourceExhausted {
+			t.Errorf("expected ResourceExhausted error with user %+v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met with user %+v, error: %v", user, err)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		user := &pb.User{
+			Id:           0,
+			LanguageCode: wrapperspb.String("en"),
+			UtcOffset:    wrapperspb.Int32(0),
+		}
+
+		mock.ExpectExec(regexp.QuoteMeta(dbqueries.UpdateUser.Full)).WithArgs(
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
+		).WillReturnResult(
+			sqlmock.NewResult(0, 0),
+		)
+
+		_, err := client.EditUserSettings(ctx, user)
+
+		if status.Code(err) != codes.NotFound {
+			t.Errorf("expected NotFound error with user %+v got %v", user, err)
+		}
+
+		if err := mock.ExpectationsWereMet(); err != nil {
+			t.Errorf("mock expectations weren't met with user %+v, error: %v", user, err)
 		}
 	})
 }

@@ -3,6 +3,7 @@ package todoserviceserver
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/bufbuild/protovalidate-go"
@@ -19,66 +20,92 @@ type TodoServiceServer struct {
 	pb.UnimplementedTodoServiceServer
 }
 
-func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) (*emptypb.Empty, error) {
+func (s *TodoServiceServer) DbActionWithUser(
+	ctx context.Context, user *pb.User,
+	operationName string, userFilledQuery dbqueries.UserFilled,
+) (_ *emptypb.Empty, err error) {
+	defer func() {
+		if err != nil {
+			log.Printf("Error in %v with user %+v: %v", operationName, user, err)
+		} else {
+			log.Printf("Operation %v with user %+v was successful", operationName, user)
+		}
+	}()
+
 	v, err := protovalidate.New()
 
 	if err != nil {
-		log.Printf("failed to initialize validator at CreateUser: %v", err)
-
 		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
-	if err = v.Validate(to_create); err != nil {
-		log.Printf("Failed to create user: %v", err)
-
+	if err = v.Validate(user); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	if to_create.GetLanguageCode() == nil && to_create.GetUtcOffset() == nil {
-		_, err = s.Db.ExecContext(
-			ctx, string(dbqueries.InsertNewUserEmpty),
-			to_create.GetId(),
+	var queryResult sql.Result
+
+	if user.GetLanguageCode() == nil && user.GetUtcOffset() == nil {
+		if userFilledQuery.Empty == "" {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("can't use %v without fields", operationName))
+		}
+		queryResult, err = s.Db.ExecContext(
+			ctx, userFilledQuery.Empty,
+			user.GetId(),
 		)
-	} else if to_create.GetLanguageCode() != nil && to_create.GetUtcOffset() != nil {
-		_, err = s.Db.ExecContext(
-			ctx, string(dbqueries.InsertNewUser),
-			to_create.GetId(),
-			to_create.GetLanguageCode().GetValue(), to_create.GetUtcOffset().GetValue(),
+	} else if user.GetLanguageCode() != nil && user.GetUtcOffset() != nil {
+		if userFilledQuery.Full == "" {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("can't use %v with all fields", operationName))
+		}
+		queryResult, err = s.Db.ExecContext(
+			ctx, userFilledQuery.Full,
+			user.GetId(),
+			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		)
-	} else if to_create.GetLanguageCode() != nil {
-		_, err = s.Db.ExecContext(
-			ctx, string(dbqueries.InsertNewUserLanguageCode),
-			to_create.GetId(),
-			to_create.GetLanguageCode().GetValue(),
+	} else if user.GetLanguageCode() != nil {
+		if userFilledQuery.LanguageCode == "" {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("can't use %v only with LanguageCode", operationName))
+		}
+		queryResult, err = s.Db.ExecContext(
+			ctx, userFilledQuery.LanguageCode,
+			user.GetId(),
+			user.GetLanguageCode().GetValue(),
 		)
 	} else {
-		_, err = s.Db.ExecContext(
-			ctx, string(dbqueries.InsertNewUserUtcOffset),
-			to_create.GetId(),
-			to_create.GetUtcOffset().GetValue(),
+		if userFilledQuery.UtcOffset == "" {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("can't use %v only with UtcOffset", operationName))
+		}
+		queryResult, err = s.Db.ExecContext(
+			ctx, userFilledQuery.UtcOffset,
+			user.GetId(),
+			user.GetUtcOffset().GetValue(),
 		)
 	}
 
 	if err != nil {
-		log.Printf(
-			"Failed to create user with id %v, language code %v and utc_offset %v: %v",
-			to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
-			err,
-		)
 		return nil, status.Error(codes.ResourceExhausted, err.Error())
 	}
 
-	log.Printf(
-		"Created user with id %v, language code %v and utc_offset %v",
-		to_create.GetId(), to_create.GetLanguageCode(), to_create.GetUtcOffset(),
-	)
+	rowsAffected, err := queryResult.RowsAffected()
+
+	if err != nil {
+		return nil, status.Error(codes.Unknown, err.Error())
+	}
+
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
 
 	return nil, nil
 }
 
-func (s *TodoServiceServer) EditUserSettings(ctx context.Context, in *pb.User) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EditUserSettings not implemented")
+func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) (*emptypb.Empty, error) {
+	return s.DbActionWithUser(ctx, to_create, "TodoServiceServer.CreateUser", dbqueries.InsertUser)
 }
+
+func (s *TodoServiceServer) EditUserSettings(ctx context.Context, to_update *pb.User) (*emptypb.Empty, error) {
+	return s.DbActionWithUser(ctx, to_update, "TodoServiceServer.UpdateUser", dbqueries.UpdateUser)
+}
+
 func (s *TodoServiceServer) AddReminder(ctx context.Context, in *pb.Reminder) (*pb.ReminderId, error) {
 
 	return nil, status.Errorf(codes.Unimplemented, "method AddReminder not implemented")
