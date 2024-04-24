@@ -3,17 +3,23 @@ package postgresrepo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	pb "github.com/awakair/awakair_todo_bot/api/todo-service"
 )
 
-type PostgresRepo struct {
-	pool *pgxpool.Pool
+type DbDriver interface {
+	// Query(ctx context.Context, sql string, optionsAndArgs ...interface{}) (pgx.Rows, error)
+	// QueryRow(ctx context.Context, sql string, optionsAndArgs ...interface{}) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 }
 
-func New(pool *pgxpool.Pool) *PostgresRepo {
-	return &PostgresRepo{pool: pool}
+type PostgresRepo struct {
+	dbDriver DbDriver
+}
+
+func New(dbDriver DbDriver) *PostgresRepo {
+	return &PostgresRepo{dbDriver: dbDriver}
 }
 
 func (pr PostgresRepo) SetUser(ctx context.Context, user *pb.User) error {
@@ -40,13 +46,13 @@ func (pr PostgresRepo) SetUser(ctx context.Context, user *pb.User) error {
 	)
 
 	if user.GetLanguageCode() == nil && user.GetUtcOffset() == nil {
-		_, err := pr.pool.Exec(ctx, queryEmptyUser, user.GetId())
+		_, err := pr.dbDriver.Exec(ctx, queryEmptyUser, user.GetId())
 
 		return err
 	}
 
 	if user.GetLanguageCode() != nil && user.GetUtcOffset() != nil {
-		_, err := pr.pool.Exec(
+		_, err := pr.dbDriver.Exec(
 			ctx, queryFullUser, user.GetId(),
 			user.GetLanguageCode().GetValue(), user.GetUtcOffset().GetValue(),
 		)
@@ -55,14 +61,14 @@ func (pr PostgresRepo) SetUser(ctx context.Context, user *pb.User) error {
 	}
 
 	if user.GetLanguageCode() != nil {
-		_, err := pr.pool.Exec(
+		_, err := pr.dbDriver.Exec(
 			ctx, queryLanguageCode, user.GetId(), user.GetLanguageCode().GetValue(),
 		)
 
 		return err
 	}
 
-	_, err := pr.pool.Exec(
+	_, err := pr.dbDriver.Exec(
 		ctx, queryUtcOffset,
 		user.GetId(),
 		user.GetUtcOffset().GetValue(),
