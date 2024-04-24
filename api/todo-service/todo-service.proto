@@ -10,8 +10,8 @@ option go_package = "github.com/awakair/awakair_todo_bot/api/todo-service";
 package todoservice;
 
 service TodoService {
-  rpc CreateUser(User) returns (google.protobuf.Empty);
-  rpc EditUserSettings(User) returns (google.protobuf.Empty);
+  rpc SetUser(User) returns (google.protobuf.Empty);
+  rpc GetUser(UserId) returns (User);
   rpc AddReminder(Reminder) returns (ReminderId);
   rpc RemoveReminder(ReminderId) returns (google.protobuf.Empty);
   rpc GetRemindersByUserId(UserId) returns (stream Reminder);
