@@ -20,7 +20,7 @@ type TodoServiceServer struct {
 	pb.UnimplementedTodoServiceServer
 }
 
-func (s *TodoServiceServer) DbActionWithUser(
+func (s *TodoServiceServer) dbActionWithUser(
 	ctx context.Context, user *pb.User,
 	operationName string, userFilledQuery dbqueries.UserFilled,
 ) (_ *emptypb.Empty, err error) {
@@ -99,15 +99,14 @@ func (s *TodoServiceServer) DbActionWithUser(
 }
 
 func (s *TodoServiceServer) CreateUser(ctx context.Context, to_create *pb.User) (*emptypb.Empty, error) {
-	return s.DbActionWithUser(ctx, to_create, "TodoServiceServer.CreateUser", dbqueries.InsertUser)
+	return s.dbActionWithUser(ctx, to_create, "TodoServiceServer.CreateUser", dbqueries.InsertUser)
 }
 
 func (s *TodoServiceServer) EditUserSettings(ctx context.Context, to_update *pb.User) (*emptypb.Empty, error) {
-	return s.DbActionWithUser(ctx, to_update, "TodoServiceServer.UpdateUser", dbqueries.UpdateUser)
+	return s.dbActionWithUser(ctx, to_update, "TodoServiceServer.UpdateUser", dbqueries.UpdateUser)
 }
 
 func (s *TodoServiceServer) AddReminder(ctx context.Context, in *pb.Reminder) (*pb.ReminderId, error) {
-
 	return nil, status.Errorf(codes.Unimplemented, "method AddReminder not implemented")
 }
 func (s *TodoServiceServer) RemoveReminder(ctx context.Context, in *pb.ReminderId) (*emptypb.Empty, error) {
