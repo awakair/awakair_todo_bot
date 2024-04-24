@@ -17,9 +17,9 @@ help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
 
-## gen_proto_server: generate server's code from todo-service.proto specs
-.PHONY: gen_proto_server
-gen_proto_server:
+## gen_server: generate server's code from todo-service.proto specs
+.PHONY: gen_server
+gen_server:
 	protoc \
 	-I ./third_party/protovalidate/proto/protovalidate \
 	-I ./api/todo-service \
@@ -31,7 +31,7 @@ gen_proto_server:
 
 ## build_server: compile server's sources
 .PHONY: build_server
-build_server: gen_proto_server
+build_server: gen_server
 	go build -o ${SERVER_EXECUTABLE_PATH} ${SERVER_PACKAGE_PATH}
 
 ## test_server: test server code
