@@ -25,7 +25,7 @@ message User {
 
 message Reminder {
   int64 user_id = 1;
-  google.protobuf.StringValue reminder_text = 2 [(buf.validate.field).string.min_len = 1];
+  string reminder_text = 2 [(buf.validate.field).string.min_len = 1];
   google.protobuf.Timestamp remind_timestamp = 5 [(buf.validate.field).timestamp.gt_now = true];
 }
 
