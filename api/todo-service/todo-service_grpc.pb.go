@@ -25,7 +25,7 @@ const _ = grpc.SupportPackageIsVersion7
 type TodoServiceClient interface {
 	SetUser(ctx context.Context, in *User, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetUser(ctx context.Context, in *UserId, opts ...grpc.CallOption) (*User, error)
-	AddReminder(ctx context.Context, in *Reminder, opts ...grpc.CallOption) (*ReminderId, error)
+	CreateReminder(ctx context.Context, in *Reminder, opts ...grpc.CallOption) (*ReminderId, error)
 	RemoveReminder(ctx context.Context, in *ReminderId, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetRemindersByUserId(ctx context.Context, in *UserId, opts ...grpc.CallOption) (TodoService_GetRemindersByUserIdClient, error)
 }
@@ -56,9 +56,9 @@ func (c *todoServiceClient) GetUser(ctx context.Context, in *UserId, opts ...grp
 	return out, nil
 }
 
-func (c *todoServiceClient) AddReminder(ctx context.Context, in *Reminder, opts ...grpc.CallOption) (*ReminderId, error) {
+func (c *todoServiceClient) CreateReminder(ctx context.Context, in *Reminder, opts ...grpc.CallOption) (*ReminderId, error) {
 	out := new(ReminderId)
-	err := c.cc.Invoke(ctx, "/todoservice.TodoService/AddReminder", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/todoservice.TodoService/CreateReminder", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (x *todoServiceGetRemindersByUserIdClient) Recv() (*Reminder, error) {
 type TodoServiceServer interface {
 	SetUser(context.Context, *User) (*emptypb.Empty, error)
 	GetUser(context.Context, *UserId) (*User, error)
-	AddReminder(context.Context, *Reminder) (*ReminderId, error)
+	CreateReminder(context.Context, *Reminder) (*ReminderId, error)
 	RemoveReminder(context.Context, *ReminderId) (*emptypb.Empty, error)
 	GetRemindersByUserId(*UserId, TodoService_GetRemindersByUserIdServer) error
 	mustEmbedUnimplementedTodoServiceServer()
@@ -128,8 +128,8 @@ func (UnimplementedTodoServiceServer) SetUser(context.Context, *User) (*emptypb.
 func (UnimplementedTodoServiceServer) GetUser(context.Context, *UserId) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
 }
-func (UnimplementedTodoServiceServer) AddReminder(context.Context, *Reminder) (*ReminderId, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddReminder not implemented")
+func (UnimplementedTodoServiceServer) CreateReminder(context.Context, *Reminder) (*ReminderId, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateReminder not implemented")
 }
 func (UnimplementedTodoServiceServer) RemoveReminder(context.Context, *ReminderId) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveReminder not implemented")
@@ -186,20 +186,20 @@ func _TodoService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TodoService_AddReminder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _TodoService_CreateReminder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Reminder)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TodoServiceServer).AddReminder(ctx, in)
+		return srv.(TodoServiceServer).CreateReminder(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/todoservice.TodoService/AddReminder",
+		FullMethod: "/todoservice.TodoService/CreateReminder",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TodoServiceServer).AddReminder(ctx, req.(*Reminder))
+		return srv.(TodoServiceServer).CreateReminder(ctx, req.(*Reminder))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -259,8 +259,8 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _TodoService_GetUser_Handler,
 		},
 		{
-			MethodName: "AddReminder",
-			Handler:    _TodoService_AddReminder_Handler,
+			MethodName: "CreateReminder",
+			Handler:    _TodoService_CreateReminder_Handler,
 		},
 		{
 			MethodName: "RemoveReminder",

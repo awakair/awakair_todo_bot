@@ -12,7 +12,7 @@ package todoservice;
 service TodoService {
   rpc SetUser(User) returns (google.protobuf.Empty);
   rpc GetUser(UserId) returns (User);
-  rpc AddReminder(Reminder) returns (ReminderId);
+  rpc CreateReminder(Reminder) returns (ReminderId);
   rpc RemoveReminder(ReminderId) returns (google.protobuf.Empty);
   rpc GetRemindersByUserId(UserId) returns (stream Reminder);
 }
