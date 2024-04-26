@@ -30,9 +30,9 @@ message Reminder {
 }
 
 message ReminderId {
-  int64 id = 1;
+  int32 id = 1;
 }
 
 message UserId {
-  int32 id = 1;
+  int64 id = 1;
 }
