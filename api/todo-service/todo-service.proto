@@ -10,9 +10,9 @@ option go_package = "github.com/awakair/awakair_todo_bot/api/todo-service";
 package todoservice;
 
 service TodoService {
-  rpc CreateUser(User) returns (google.protobuf.Empty);
-  rpc EditUserSettings(User) returns (google.protobuf.Empty);
-  rpc AddReminder(Reminder) returns (ReminderId);
+  rpc SetUser(User) returns (google.protobuf.Empty);
+  rpc GetUser(UserId) returns (User);
+  rpc CreateReminder(Reminder) returns (ReminderId);
   rpc RemoveReminder(ReminderId) returns (google.protobuf.Empty);
   rpc GetRemindersByUserId(UserId) returns (stream Reminder);
 }
@@ -30,9 +30,9 @@ message Reminder {
 }
 
 message ReminderId {
-  int64 id = 1;
+  int32 id = 1;
 }
 
 message UserId {
-  int32 id = 1;
+  int64 id = 1;
 }

@@ -1,18 +1,19 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
 	pb "github.com/awakair/awakair_todo_bot/api/todo-service"
-	todoserviceserver "github.com/awakair/awakair_todo_bot/internal/TodoServiceServer"
+	"github.com/awakair/awakair_todo_bot/internal/postgresrepo"
+	"github.com/awakair/awakair_todo_bot/internal/todoserviceserver"
 )
 
 var (
@@ -26,11 +27,11 @@ var (
 )
 
 func main() {
-	db, err := sql.Open("pgx", dbUrl)
+	pool, err := pgxpool.New(context.Background(), dbUrl)
 	if err != nil {
 		log.Fatalf("cannot connect to database with url %s: %v", dbUrl, err)
 	}
-	defer db.Close()
+	defer pool.Close()
 
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
@@ -39,7 +40,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterTodoServiceServer(s, &todoserviceserver.TodoServiceServer{Db: db})
+	pb.RegisterTodoServiceServer(s, todoserviceserver.New(postgresrepo.New(pool)))
 
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
